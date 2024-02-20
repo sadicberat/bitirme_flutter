@@ -1,3 +1,6 @@
+import 'package:bitirme_flutter/signup_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -45,24 +48,44 @@ class _LoginPageState extends State<LoginPage> {
               },
               child: Text('Giriş Yap'),
             ),
+            SizedBox(height: 24.0),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(context,
+                MaterialPageRoute(builder: (context) => RegisterPage() ));
+
+              },
+              child: Text('kayıt ol'),
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _login() {
-    // Bu kısımda giriş yapma işlemini gerçekleştirebilirsiniz.
-    // Örneğin, Firebase Authentication kullanarak giriş yapabilirsiniz.
+  
+
+  void _login() async {
     String email = _emailController.text;
     String password = _passwordController.text;
 
-    // Giriş işlemleri burada yapılacak.
-    print('Giriş yapıldı - E-posta: $email, Şifre: $password');
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = userCredential.user;
+      print('Giriş yapıldı - Kullanıcı UID: ${user?.uid}');
+    } catch (e) {
+      print('Giriş yaparken bir hata oluştu: $e');
+    }
   }
+
 }
 
-void main() {
+Future<void> main() async {
+  await Firebase.initializeApp();
   runApp(MaterialApp(
     home: LoginPage(),
   ));
