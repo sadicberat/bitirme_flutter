@@ -1,9 +1,23 @@
+import 'package:bitirme_flutter/firebase_options.dart';
+import 'package:bitirme_flutter/main_page.dart';
 import 'package:bitirme_flutter/signup_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import "services/auth/auth_service.dart";
+
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.android);
+  runApp(const MaterialApp(
+    home: LoginPage(),
+  ));
+}
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -16,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Login Formu'),
+        title: const Text('Login Formu'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -27,35 +41,37 @@ class _LoginPageState extends State<LoginPage> {
             TextField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'E-posta',
               ),
             ),
-            SizedBox(height: 16.0),
+            const SizedBox(height: 16.0),
             TextField(
               controller: _passwordController,
               obscureText: true,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Şifre',
               ),
             ),
-            SizedBox(height: 24.0),
+            const SizedBox(height: 24.0),
             ElevatedButton(
               onPressed: () {
                 // Burada giriş yapma işlemini gerçekleştirebilirsiniz.
                 // Örneğin, Firebase Authentication kullanarak giriş yapabilirsiniz.
                 _login();
+
+
               },
-              child: Text('Giriş Yap'),
+              child: const Text('Giriş Yap'),
             ),
-            SizedBox(height: 24.0),
+            const SizedBox(height: 24.0),
             ElevatedButton(
               onPressed: () {
                 Navigator.push(context,
-                MaterialPageRoute(builder: (context) => RegisterPage() ));
+                MaterialPageRoute(builder: (context) => const RegisterPage() ));
 
               },
-              child: Text('kayıt ol'),
+              child: const Text('kayıt ol'),
             ),
           ],
         ),
@@ -63,7 +79,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  
+
 
   void _login() async {
     String email = _emailController.text;
@@ -77,16 +93,22 @@ class _LoginPageState extends State<LoginPage> {
 
       User? user = userCredential.user;
       print('Giriş yapıldı - Kullanıcı UID: ${user?.uid}');
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const MainActivity()));
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        print('Kullanıcı bulunamadı');
+      } else if (e.code == 'wrong-password') {
+        print('Hatalı şifre');
+      } else {
+        print('Giriş yaparken bir hata oluştu: $e');
+      }
     } catch (e) {
-      print('Giriş yaparken bir hata oluştu: $e');
+      print('Giriş yaparken bir hata oluştu(catch): $e');
     }
   }
 
+
+
 }
 
-Future<void> main() async {
-  await Firebase.initializeApp();
-  runApp(MaterialApp(
-    home: LoginPage(),
-  ));
-}
+
