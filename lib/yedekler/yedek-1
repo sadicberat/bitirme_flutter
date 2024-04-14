@@ -1,0 +1,91 @@
+@override
+  _MainActivityState createState() => _MainActivityState();
+}
+
+class _MainActivityState extends State<MainActivity> {
+  DateTime? selectedDate = DateTime.now();
+  CalendarFormat calendarFormat = CalendarFormat.month;
+  DateTime focusedDay = DateTime.now();
+
+  final TextEditingController _taskNameController = TextEditingController();
+  final TextEditingController _taskDescriptionController = TextEditingController();
+
+  List<Task> tasks = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Görev Takip'),
+        actions: [
+          PopupMenuButton<String>(
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'logout',
+                child: Text('Çıkış Yap'),
+              ),
+              const PopupMenuItem(
+                value: 'profile',
+                child: Text('Profil'),
+              ),
+              const PopupMenuItem(
+                value: 'addNote',
+                child: Text('Not Ekle'),
+              ),
+            ],
+            onSelected: (value) {
+              handleMenuSelection(value);
+            },
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TableCalendar(
+                calendarFormat: calendarFormat,
+                focusedDay: focusedDay,
+                selectedDayPredicate: (day) {
+                  return isSameDay(selectedDate, day);
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  handleDateSelected(selectedDay);
+                },
+                firstDay: DateTime.utc(2021, 1, 1),
+                lastDay: DateTime.utc(2025, 12, 31)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _taskNameController,
+              decoration: const InputDecoration(hintText: 'Görev Adı'),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _taskDescriptionController,
+              decoration: const InputDecoration(hintText: 'Görev Açıklaması'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                handleAddMission();
+              },
+              child: const Text('Görev Ekle'),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: tasks.length,
+                itemBuilder: (context, index) {
+                  final task = tasks[index];
+                  return ListTile(
+                    title: Text(task.taskName),
+                    subtitle: Text(task.taskDescription),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }

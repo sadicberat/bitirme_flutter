@@ -1,6 +1,7 @@
 import 'package:bitirme_flutter/firebase_options.dart';
 import 'package:bitirme_flutter/main_page.dart';
 import 'package:bitirme_flutter/signup_page.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -81,31 +82,41 @@ class _LoginPageState extends State<LoginPage> {
 
 
 
-  void _login() async {
-    String email = _emailController.text;
-    String password = _passwordController.text;
+void _login() async {
+  String email = _emailController.text;
+  String password = _passwordController.text;
 
-    try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+  try {
+    UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-      User? user = userCredential.user;
-      print('Giriş yapıldı - Kullanıcı UID: ${user?.uid}');
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const MainActivity()));
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        print('Kullanıcı bulunamadı');
-      } else if (e.code == 'wrong-password') {
-        print('Hatalı şifre');
-      } else {
-        print('Giriş yaparken bir hata oluştu: $e');
+    User? user = userCredential.user;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      String role = userData['role'];
+
+      if (role == 'teacher') {
+        AuthService().updateAllTeachersStudents();
       }
-    } catch (e) {
-      print('Giriş yaparken bir hata oluştu(catch): $e');
+
+      print('Giriş yapıldı - Kullanıcı UID: ${user.uid}');
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const MainActivity()));
     }
+  } on FirebaseAuthException catch (e) {
+    if (e.code == 'user-not-found') {
+      print('Kullanıcı bulunamadı');
+    } else if (e.code == 'wrong-password') {
+      print('Hatalı şifre');
+    } else {
+      print('Giriş yaparken bir hata oluştu: $e');
+    }
+  } catch (e) {
+    print('Giriş yaparken bir hata oluştu(catch): $e');
   }
+}
 
 
 

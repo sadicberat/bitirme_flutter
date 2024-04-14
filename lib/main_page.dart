@@ -1,3 +1,5 @@
+import 'package:bitirme_flutter/services/auth/app_user.dart';
+import 'package:bitirme_flutter/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,19 +7,29 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class MainActivity extends StatefulWidget {
-  const MainActivity({super.key});
+  const MainActivity({Key? key}) : super(key: key);
 
   @override
   _MainActivityState createState() => _MainActivityState();
 }
 
 class _MainActivityState extends State<MainActivity> {
-  DateTime? selectedDate;
+  DateTime? selectedDate = DateTime.now();
   CalendarFormat calendarFormat = CalendarFormat.month;
   DateTime focusedDay = DateTime.now();
 
+
   final TextEditingController _taskNameController = TextEditingController();
-  final TextEditingController _taskDescriptionController = TextEditingController();
+  final TextEditingController _taskDescriptionController =
+      TextEditingController();
+
+  List<Task> tasks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTasks();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +51,7 @@ class _MainActivityState extends State<MainActivity> {
                 value: 'addNote',
                 child: Text('Not Ekle'),
               ),
+
             ],
             onSelected: (value) {
               handleMenuSelection(value);
@@ -51,16 +64,20 @@ class _MainActivityState extends State<MainActivity> {
         child: Column(
           children: [
             TableCalendar(
-              calendarFormat: calendarFormat,
-              focusedDay: focusedDay,
-              selectedDayPredicate: (day) {
-                return isSameDay(selectedDate, day);
-              },
-              onDaySelected: (selectedDay, focusedDay) {
-                handleDateSelected(selectedDay);
-              },
-              firstDay: DateTime.utc(2021, 1, 1), lastDay: DateTime.utc(2025, 12, 31)
-            ),
+                calendarFormat: calendarFormat,
+                focusedDay: focusedDay,
+                selectedDayPredicate: (day) {
+                  return isSameDay(selectedDate, day);
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  addTask();
+                  setState(() {
+                    selectedDate = selectedDay;
+                    focusedDay = focusedDay;
+                  });
+                },
+                firstDay: DateTime.utc(2021, 1, 1),
+                lastDay: DateTime.utc(2025, 12, 31)),
             const SizedBox(height: 16),
             TextField(
               controller: _taskNameController,
@@ -73,9 +90,7 @@ class _MainActivityState extends State<MainActivity> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                handleAddMission();
-              },
+              onPressed: addTask,
               child: const Text('Görev Ekle'),
             ),
             const SizedBox(height: 16),
@@ -83,10 +98,15 @@ class _MainActivityState extends State<MainActivity> {
               child: ListView.builder(
                 itemCount: tasks.length,
                 itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return ListTile(
-                    title: Text(task['taskName']),
-                    subtitle: Text(task['taskDescription']),
+                  tasks.sort((a, b) => DateFormat('yyyy-MM-dd')
+                      .parse(a.date)
+                      .compareTo(DateFormat('yyyy-MM-dd').parse(b.date)));
+                  return Card(
+                    child: ListTile(
+                      title: Text(tasks[index].taskName),
+                      subtitle: Text(
+                          '${tasks[index].taskDescription}\nDate: ${tasks[index].date}'),
+                    ),
                   );
                 },
               ),
@@ -97,90 +117,114 @@ class _MainActivityState extends State<MainActivity> {
     );
   }
 
-  void handleDateSelected(DateTime date) {
-    setState(() {
-      selectedDate = date;
-      focusedDay = date;
-    });
-    showToast('$selectedDate');
-    loadTasksForDate(selectedDate);
+  void addTask() async {
+    if (_taskNameController.text.isNotEmpty &&
+        _taskDescriptionController.text.isNotEmpty) {
+      Task newTask = Task(
+        userId: FirebaseAuth.instance.currentUser!.uid,
+        date: DateFormat('yyyy-MM-dd').format(selectedDate!),
+        taskName: _taskNameController.text,
+        taskDescription: _taskDescriptionController.text,
+      );
+
+      // Add the new task to Firestore
+      final tasksRef = FirebaseFirestore.instance.collection('tasks');
+      await tasksRef.add(newTask.toMap());
+
+      // Fetch tasks from Firestore
+      final querySnapshot = await tasksRef
+          .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+          .get();
+
+      // Clear the current tasks list
+      tasks.clear();
+
+      // Add fetched tasks to the tasks list
+      for (final doc in querySnapshot.docs) {
+        tasks.add(Task.fromMap(doc.data()));
+      }
+
+      setState(() {});
+
+      _taskNameController.clear();
+      _taskDescriptionController.clear();
+    }
   }
 
-  void handleAddMission() {
-    if (selectedDate == null) {
-      showToast('Lütfen bir tarih seçin');
-      return;
+  Future<void> fetchTasks() async {
+    final tasksRef = FirebaseFirestore.instance.collection('tasks');
+    final querySnapshot = await tasksRef
+        .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+        .get();
+
+    tasks.clear();
+
+    for (final doc in querySnapshot.docs) {
+      tasks.add(Task.fromMap(doc.data()));
     }
 
-    final taskName = _taskNameController.text;
-    final taskDescription = _taskDescriptionController.text;
-
-    addTaskForDate(taskName, taskDescription);
+    setState(() {});
   }
 
-  void showToast(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+void handleMenuSelection(String value) async {
+
+  AuthService authService = AuthService();
+
+  AppUser? user = await authService.getUser(FirebaseAuth.instance.currentUser!.uid);
+
+  switch (value) {
+    case 'logout':
+      FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushReplacementNamed('/login');
+      break;
+    case 'profile':
+      Navigator.of(context).pushNamed('/profile');
+      break;
+    case 'addNote':
+    // Kullanıcının rolünü kontrol edin
+      if (user != null && user.role == 'student') {
+        // Kullanıcı bir öğrenci ise, notlama_page2.dart sayfasına yönlendirin
+        Navigator.of(context).pushNamed('/addNote2');
+      } else {
+        // Kullanıcı bir öğretmen ise, notlama_page.dart sayfasına yönlendirin
+        Navigator.of(context).pushNamed('/addNote');
+      }
+      break;
+    //case '':
+      Navigator.of(context).pushNamed('/addNote');
+      break;
+  }
+}
+}
+
+class Task {
+  final String userId;
+  final String date;
+  final String taskName;
+  final String taskDescription;
+
+  Task({
+    required this.userId,
+    required this.date,
+    required this.taskName,
+    required this.taskDescription,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'date': date,
+      'taskName': taskName,
+      'taskDescription': taskDescription,
+    };
+  }
+
+  factory Task.fromMap(Map<String, dynamic> map) {
+    return Task(
+      userId: map['userId'] ?? '',
+      date: map['date'] ?? '',
+      taskName: map['taskName'] ?? '',
+      taskDescription: map['taskDescription'] ?? '',
     );
   }
-
-  void addTaskForDate(String taskName, String taskDescription) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      final task = {
-        'userId': user.uid,
-        'date': DateFormat('yyyy-MM-dd').format(selectedDate!),
-        'taskName': taskName,
-        'taskDescription': taskDescription,
-      };
-
-      FirebaseFirestore.instance.collection('tasks').add(task).then((value) {
-        showToast('Görev kayıt edildi');
-        loadTasksForDate(selectedDate);
-      }).catchError((e) {
-        showToast('Firestore hatası: $e');
-      });
-    }
-  }
-
-  void loadTasksForDate(DateTime? selectedDate) {
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null && selectedDate != null) {
-      FirebaseFirestore.instance
-          .collection('tasks')
-          .where('userId', isEqualTo: user.uid)
-          .where('date', isEqualTo: DateFormat('yyyy-MM-dd').format(selectedDate))
-          .orderBy('date', descending: false)
-          .get()
-          .then((QuerySnapshot documents) {
-        setState(() {
-          tasks = [];
-          for (var doc in documents.docs) {
-            tasks.add(doc.data() as Map<String, dynamic>,);
-          }
-        });
-      }).catchError((e) {
-        showToast('Veri çekme hatası: $e');
-      });
-    }
-  }
-
-  void handleMenuSelection(String value) {
-    switch (value) {
-      case 'logout':
-        FirebaseAuth.instance.signOut();
-        Navigator.of(context).pushReplacementNamed('/login');
-        break;
-      case 'profile':
-        Navigator.of(context).pushNamed('/profile');
-        break;
-      case 'addNote':
-        Navigator.of(context).pushNamed('/addNote');
-        break;
-    }
-  }
-
-  List<Map<String, dynamic>> tasks = [];
 }
