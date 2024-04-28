@@ -14,6 +14,7 @@ Future<void> main() async {
   runApp(const MaterialApp(
     home: LoginPage(),
   ));
+
 }
 
 class LoginPage extends StatefulWidget {
@@ -57,8 +58,6 @@ class _LoginPageState extends State<LoginPage> {
             const SizedBox(height: 24.0),
             ElevatedButton(
               onPressed: () {
-                // Burada giriş yapma işlemini gerçekleştirebilirsiniz.
-                // Örneğin, Firebase Authentication kullanarak giriş yapabilirsiniz.
                 _login();
 
 

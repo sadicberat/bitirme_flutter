@@ -183,10 +183,10 @@ void handleMenuSelection(String value) async {
     case 'addNote':
     // Kullanıcının rolünü kontrol edin
       if (user != null && user.role == 'student') {
-        // Kullanıcı bir öğrenci ise, notlama_page2.dart sayfasına yönlendirin
+        // Kullanıcı bir öğrenci ise, notlama_st.dart sayfasına yönlendirin
         Navigator.of(context).pushNamed('/addNote2');
       } else {
-        // Kullanıcı bir öğretmen ise, notlama_page.dart sayfasına yönlendirin
+        // Kullanıcı bir öğretmen ise, notlama_te.dart sayfasına yönlendirin
         Navigator.of(context).pushNamed('/addNote');
       }
       break;
