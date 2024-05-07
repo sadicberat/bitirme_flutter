@@ -1,5 +1,6 @@
 import 'package:bitirme_flutter/notlama_st.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class GradingPage extends StatefulWidget {
@@ -31,7 +32,28 @@ class _StudentPageState extends State<GradingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Student Page'),
+        title: const Text('Notlama Sayfası'),
+        actions: [
+          PopupMenuButton<String>(
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'logout',
+                child: Text('Çıkış Yap'),
+              ),
+              const PopupMenuItem(
+                value: 'profile',
+                child: Text('Profil'),
+              ),
+              const PopupMenuItem(
+                value: 'main',
+                child: Text('Ana Sayfa'),
+              ),
+            ],
+            onSelected: (value) {
+              handleMenuSelection(value);
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -261,4 +283,23 @@ class _StudentPageState extends State<GradingPage> {
 
     setState(() {});
   }
+
+  void handleMenuSelection(String value) {
+    switch (value) {
+      case 'logout':
+        FirebaseAuth.instance.signOut();
+        Navigator.of(context).pushReplacementNamed('/login');
+        break;
+      case 'profile':
+        Navigator.of(context).pushNamed('/profile');
+        break;
+      case 'addNote':
+        Navigator.of(context).pushNamed('/addNote');
+        break;
+      case 'main':
+        Navigator.of(context).pushNamed('/main');
+        break;
+    }
+  }
+
 }
