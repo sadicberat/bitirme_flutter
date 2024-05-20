@@ -3,6 +3,9 @@ import 'package:bitirme_flutter/main_page.dart';
 import 'package:bitirme_flutter/profil_page.dart';
 import 'package:bitirme_flutter/services/auth/app_user.dart';
 import 'package:bitirme_flutter/services/auth/auth_service.dart';
+import 'package:bitirme_flutter/videos/video.dart';
+import 'package:bitirme_flutter/videos/video_fizik.dart';
+import 'package:bitirme_flutter/videos/video_mat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +29,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -46,15 +50,18 @@ class MyApp extends StatelessWidget {
                   } else if (snapshot.hasData) {
                     return ProfilePage(user: snapshot.data!);
                   } else {
-                    return CircularProgressIndicator();
+                    return const CircularProgressIndicator();
                   }
                 } else {
-                  return CircularProgressIndicator();
+                  return const CircularProgressIndicator();
                 }
               },
             ),
         '/addNote': (context) => GradingPage(),
         '/addNote2': (context) => const GradingPage2(),
+        '/videoPage': (context) => const VideoPage(),
+        '/video_fizik': (context) => VideoFizikPage(),
+        '/video_mat': (context) => const VideoMatPage(),
 
         // Define your /main route here
         // other routes...

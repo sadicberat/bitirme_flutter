@@ -10,10 +10,6 @@ class GradingPage2 extends StatefulWidget {
 }
 
 class _GradingPageState extends State<GradingPage2> {
-  // Öğrenci listesi ve her öğrencinin notu
-  List<String> students = [];
-  Map<String, String> grades = {};
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,9 +41,9 @@ class _GradingPageState extends State<GradingPage2> {
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('students').snapshots(),
-        builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+      body: FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('students').doc(FirebaseAuth.instance.currentUser!.uid).get(),
+        builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
           if (snapshot.hasError) {
             return Text('Error: ${snapshot.error}');
           }
@@ -56,68 +52,22 @@ class _GradingPageState extends State<GradingPage2> {
             return CircularProgressIndicator();
           }
 
-          return ListView(
-            children: snapshot.data!.docs.map((DocumentSnapshot document) {
-              Map<String, dynamic> data =
-                  document.data() as Map<String, dynamic>;
-              return FutureBuilder<String?>(
-                future: getGradeFromStudent(document.id, 'courseName'),
-                // Replace 'courseName' with the actual course name
-                builder:
-                    (BuildContext context, AsyncSnapshot<String?> snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return ListTile(
-                      title: Text(data['name']),
-                      subtitle: Text('Not: Loading...'),
-                    );
-                  } else {
-                    String? grade = snapshot.data;
-                    return ListTile(
-                      title: Text(data['name']),
-                      subtitle: Text('Not: ${grade ?? 'N/A'}'),
-                    );
-                  }
-                },
+          Map<String, dynamic> data = snapshot.data!.data() as Map<String, dynamic>;
+          List grades = data['grades'] as List;
+
+          return ListView.builder(
+            itemCount: grades.length,
+            itemBuilder: (context, index) {
+              Map<String, dynamic> grade = grades[index] as Map<String, dynamic>;
+              return ListTile(
+                title: Text('Ders: ${grade['course']}'),
+                subtitle: Text('Not: ${grade['grade']}'),
               );
-            }).toList(),
+            },
           );
         },
       ),
     );
-  }
-
-  Future<String?> getGradeFromStudent(String studentId, String course) async {
-    final studentRef =
-        FirebaseFirestore.instance.collection('students').doc(studentId);
-
-    // Get the document
-    final docSnapshot = await studentRef.get();
-
-    // Check if the document exists
-    if (docSnapshot.exists) {
-      // Get the document data
-      final docData = docSnapshot.data();
-
-      // Check if the document data is not null
-      if (docData != null) {
-        // Check if the 'grades' field exists
-        if (docData.containsKey('grades')) {
-          // Get the grades
-          List grades = docData['grades'];
-
-          // Check if a grade for the course exists
-          int index = grades.indexWhere((grade) => grade['course'] == course);
-
-          if (index != -1) {
-            // If a grade for the course exists, return it
-            return grades[index]['grade'];
-          }
-        }
-      }
-    }
-
-    // If the document doesn't exist, or the 'grades' field doesn't exist, or a grade for the course doesn't exist, return null
-    return null;
   }
 
   void handleMenuSelection(String value) {

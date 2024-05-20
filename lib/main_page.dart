@@ -51,6 +51,10 @@ class _MainActivityState extends State<MainActivity> {
                 value: 'addNote',
                 child: Text('Not Ekle'),
               ),
+              const PopupMenuItem(
+                value: 'video',
+                child: Text('Video'),
+              ),
 
             ],
             onSelected: (value) {
@@ -190,8 +194,8 @@ void handleMenuSelection(String value) async {
         Navigator.of(context).pushNamed('/addNote');
       }
       break;
-    //case '':
-      Navigator.of(context).pushNamed('/addNote');
+    case 'video':
+      Navigator.of(context).pushNamed('/videoPage');
       break;
   }
 }
