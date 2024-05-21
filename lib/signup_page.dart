@@ -1,99 +1,117 @@
 import 'package:bitirme_flutter/services/auth/app_user.dart';
-import 'package:bitirme_flutter/services/auth/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:bitirme_flutter/services/auth/auth_service.dart';
 
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class SignUpPage extends StatefulWidget {
+  const SignUpPage({Key? key}) : super(key: key);
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  _SignUpPageState createState() => _SignUpPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  String _role = 'student';
-  List<String> _roles = ['student', 'teacher'];
+  final AuthService _authService = AuthService();
+  String _selectedRole = 'student'; // Default role
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kayıt Ol'),
+        title: Text('Kayıt Ol', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'İsim'),
+              decoration: InputDecoration(
+                labelText: 'İsim',
+                border: OutlineInputBorder(),
+              ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'E-posta'),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Şifre'),
+              decoration: InputDecoration(
+                labelText: 'Şifre',
+                border: OutlineInputBorder(),
+              ),
               obscureText: true,
             ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField(
-              value: _role,
-              items: _roles.map((String role) {
-                return DropdownMenuItem(
+            SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _selectedRole,
+              decoration: InputDecoration(
+                labelText: 'Rol Seçin',
+                border: OutlineInputBorder(),
+              ),
+              items: ['student', 'teacher'].map((String role) {
+                return DropdownMenuItem<String>(
                   value: role,
                   child: Text(role),
                 );
               }).toList(),
-              onChanged: (value) {
+              onChanged: (String? newValue) {
                 setState(() {
-                  _role = value.toString();
+                  _selectedRole = newValue!;
                 });
               },
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () async {
-                if (_emailController.text.isNotEmpty &&
-                    _passwordController.text.isNotEmpty &&
-                    _nameController.text.isNotEmpty) {
-                  try {
-                    AppUser? user = await AuthService().addUser(
-                      name: _nameController.text,
-                      mail: _emailController.text,
-                      password: _passwordController.text,
-                      role: _role,
-                    );
-                    if (_role == 'teacher') {
-                      AuthService authService = AuthService(); // AuthService sınıfının bir örneğini oluşturun
-                      List<String> studentIds = await authService.getStudentIds(); // getStudentIds fonksiyonunu çağırın ve sonucunu bekleyin
-                      await AuthService().updateAllTeachersStudents(); // updateAllTeachersStudents fonksiyonunu çağırın ve sonucunu bekleyin
-                    }
-                    if (user != null) {
-                      // Navigate to main_page.dart
-                      Navigator.pushNamed(context, '/main');
-                    }
-                  } catch (e) {
-                    // Handle the error
-                    print('Registration error: $e');
-                  }
-                } else {
-                  // Handle the case where the text fields are empty
-                  print('Please fill in all fields');
-                }
-              },
-              child: const Text('Kayıt Ol'),
+              onPressed: _signUp,
+              child: Text('Kayıt Ol'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple, // formerly `primary`
+                foregroundColor: Colors.white, // formerly `onPrimary`
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _signUp() async {
+    String email = _emailController.text;
+    String password = _passwordController.text;
+    String name = _nameController.text;
+
+    try {
+      AppUser? user = await _authService.addUser(
+        name: name,
+        mail: email,
+        password: password,
+        role: _selectedRole,
+      );
+      if (user != null) {
+        Navigator.of(context).pushReplacementNamed('/login');
+      } else {
+        // Handle error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Kayıt başarısız. Lütfen tekrar deneyin.')),
+        );
+      }
+    } catch (e) {
+      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hata: $e')),
+      );
+    }
   }
 }

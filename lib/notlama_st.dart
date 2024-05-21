@@ -27,10 +27,6 @@ class _GradingPageState extends State<GradingPage2> {
                 child: Text('Profil'),
               ),
               const PopupMenuItem(
-                value: 'addNote',
-                child: Text('Not Ekle'),
-              ),
-              const PopupMenuItem(
                 value: 'main',
                 child: Text('Ana Sayfa'),
               ),
@@ -79,7 +75,7 @@ class _GradingPageState extends State<GradingPage2> {
       case 'profile':
         Navigator.of(context).pushNamed('/profile');
         break;
-      case 'addNote':
+      //case 'addNote':
         Navigator.of(context).pushNamed('/addNote');
         break;
       case 'main':

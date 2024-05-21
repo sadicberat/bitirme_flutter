@@ -1,24 +1,9 @@
-import 'package:bitirme_flutter/firebase_options.dart';
-import 'package:bitirme_flutter/main_page.dart';
-import 'package:bitirme_flutter/signup_page.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import "services/auth/auth_service.dart";
-
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.android);
-  runApp(const MaterialApp(
-    home: LoginPage(),
-  ));
-
-}
+import 'package:bitirme_flutter/services/auth/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({Key? key}) : super(key: key);
 
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -27,51 +12,45 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login Formu'),
+        title: Text('Giriş Yap', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
               controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'E-posta',
-              ),
+              decoration: InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
             ),
-            const SizedBox(height: 16.0),
+            SizedBox(height: 16),
             TextField(
               controller: _passwordController,
+              decoration: InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Şifre',
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _signIn,
+              child: Text('Giriş Yap'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple, // formerly `primary`
+                foregroundColor: Colors.white, // formerly `onPrimary`
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
-            const SizedBox(height: 24.0),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
-                _login();
-
-
+                Navigator.of(context).pushNamed('/signup');
               },
-              child: const Text('Giriş Yap'),
-            ),
-            const SizedBox(height: 24.0),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const RegisterPage() ));
-
-              },
-              child: const Text('kayıt ol'),
+              child: Text('Hesap oluştur'),
             ),
           ],
         ),
@@ -79,46 +58,17 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-
-
-void _login() async {
-  String email = _emailController.text;
-  String password = _passwordController.text;
-
-  try {
-    UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-
-    User? user = userCredential.user;
+  void _signIn() async {
+    String email = _emailController.text;
+    String password = _passwordController.text;
+    User? user = await _authService.signInWithEmailPassword(email, password);
     if (user != null) {
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-      String role = userData['role'];
-
-      if (role == 'teacher') {
-        AuthService().updateAllTeachersStudents();
-      }
-
-      print('Giriş yapıldı - Kullanıcı UID: ${user.uid}');
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const MainActivity()));
-    }
-  } on FirebaseAuthException catch (e) {
-    if (e.code == 'user-not-found') {
-      print('Kullanıcı bulunamadı');
-    } else if (e.code == 'wrong-password') {
-      print('Hatalı şifre');
+      Navigator.of(context).pushReplacementNamed('/main');
     } else {
-      print('Giriş yaparken bir hata oluştu: $e');
+      // Handle error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Giriş başarısız. Lütfen tekrar deneyin.')),
+      );
     }
-  } catch (e) {
-    print('Giriş yaparken bir hata oluştu(catch): $e');
   }
 }
-
-
-
-}
-
-
