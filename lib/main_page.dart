@@ -66,7 +66,7 @@ class _MainActivityState extends State<MainActivity> {
               onDaySelected: (selectedDay, focusedDay) {
                 setState(() {
                   selectedDate = selectedDay;
-                  focusedDay = focusedDay;
+                  this.focusedDay = focusedDay;
                 });
               },
               firstDay: DateTime.utc(2021, 1, 1),
@@ -87,8 +87,8 @@ class _MainActivityState extends State<MainActivity> {
               onPressed: selectedTask == null ? addTask : updateTask,
               child: Text(selectedTask == null ? 'Görev Ekle' : 'Görevi Güncelle'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple, // formerly `primary`
-                foregroundColor: Colors.white, // formerly `onPrimary`
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -133,7 +133,7 @@ class _MainActivityState extends State<MainActivity> {
                                       print("İndirme hatası: $e");
                                     }
                                   },
-                                  child: const Text('Dosya İndir (Öğretmen)'),
+                                  child: const Text('Dosya İndir'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.deepPurple,
                                     foregroundColor: Colors.white,
@@ -154,21 +154,21 @@ class _MainActivityState extends State<MainActivity> {
                                       print("İndirme hatası: $e");
                                     }
                                   },
-                                  child: const Text('Dosya İndir (Öğrenci)'),
+                                  child: const Text('ödev'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.deepPurple,
                                     foregroundColor: Colors.white,
                                   ),
                                 ),
                               ElevatedButton(
-                                onPressed: () => uploadFile(tasks[index].taskId),
+                                onPressed: () => uploadFile(tasks[index].taskId, tasks[index].source == 'tasks'),
                                 child: const Text('Dosya Yükle'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.deepPurple,
                                   foregroundColor: Colors.white,
                                 ),
                               ),
-                              if (tasks[index].userId == FirebaseAuth.instance.currentUser!.uid)
+                              if (tasks[index].source == 'tasks' && tasks[index].userId == FirebaseAuth.instance.currentUser!.uid)
                                 Row(
                                   children: [
                                     IconButton(
@@ -213,20 +213,14 @@ class _MainActivityState extends State<MainActivity> {
         taskName: _taskNameController.text,
         taskDescription: _taskDescriptionController.text,
         fileName: "",
+        submittedFileName: "",
+        source: 'tasks',
       );
 
       final tasksRef = FirebaseFirestore.instance.collection('tasks');
       await tasksRef.doc(newTask.taskId).set(newTask.toMap());
 
-      final querySnapshot = await tasksRef
-          .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
-          .get();
-
-      tasks.clear();
-
-      for (final doc in querySnapshot.docs) {
-        tasks.add(Task.fromMap(doc.data()));
-      }
+      await fetchTasks(); // Tüm görevleri yeniden yükle
 
       setState(() {
         selectedTask = null;
@@ -246,20 +240,14 @@ class _MainActivityState extends State<MainActivity> {
         taskName: _taskNameController.text,
         taskDescription: _taskDescriptionController.text,
         fileName: selectedTask!.fileName,
+        submittedFileName: selectedTask!.submittedFileName,
+        source: selectedTask!.source,
       );
 
       final tasksRef = FirebaseFirestore.instance.collection('tasks');
       await tasksRef.doc(updatedTask.taskId).set(updatedTask.toMap());
 
-      final querySnapshot = await tasksRef
-          .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
-          .get();
-
-      tasks.clear();
-
-      for (final doc in querySnapshot.docs) {
-        tasks.add(Task.fromMap(doc.data()));
-      }
+      await fetchTasks(); // Tüm görevleri yeniden yükle
 
       setState(() {
         selectedTask = null;
@@ -274,15 +262,7 @@ class _MainActivityState extends State<MainActivity> {
     final tasksRef = FirebaseFirestore.instance.collection('tasks');
     await tasksRef.doc(taskId).delete();
 
-    final querySnapshot = await tasksRef
-        .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
-        .get();
-
-    tasks.clear();
-
-    for (final doc in querySnapshot.docs) {
-      tasks.add(Task.fromMap(doc.data()));
-    }
+    await fetchTasks(); // Tüm görevleri yeniden yükle
 
     setState(() {});
   }
@@ -296,10 +276,11 @@ class _MainActivityState extends State<MainActivity> {
     tasks.clear();
 
     for (final doc in querySnapshot.docs) {
-      tasks.add(Task.fromMap(doc.data()));
+      Task task = Task.fromMap(doc.data());
+      task.source = 'tasks';
+      tasks.add(task);
     }
 
-    // Öğrencinin kendi görevlerini de çekelim
     final studentTasksRef = FirebaseFirestore.instance.collection('students').doc(FirebaseAuth.instance.currentUser!.uid);
     final studentDocSnapshot = await studentTasksRef.get();
 
@@ -307,7 +288,9 @@ class _MainActivityState extends State<MainActivity> {
       final data = studentDocSnapshot.data();
       if (data != null && data.containsKey('tasks')) {
         for (final task in data['tasks']) {
-          tasks.add(Task.fromMap(task));
+          Task studentTask = Task.fromMap(task);
+          studentTask.source = 'students';
+          tasks.add(studentTask);
         }
       }
     }
@@ -351,7 +334,7 @@ class _MainActivityState extends State<MainActivity> {
     }
   }
 
-  Future<void> uploadFile(String taskId) async {
+  Future<void> uploadFile(String taskId, bool isTask) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx', 'txt'],
@@ -362,9 +345,13 @@ class _MainActivityState extends State<MainActivity> {
 
       try {
         String fileName = file.name;
+        String filePath;
 
-        // Öğrenci tarafından yüklendiğinde submittedFileName alanına kayıt yapılacak
-        String filePath = 'uploads/submissions/${FirebaseAuth.instance.currentUser!.uid}/$taskId/$fileName';
+        if (isTask) {
+          filePath = 'uploads/${FirebaseAuth.instance.currentUser!.uid}/$taskId/$fileName';
+        } else {
+          filePath = 'uploads/submissions/${FirebaseAuth.instance.currentUser!.uid}/$taskId/$fileName';
+        }
 
         if (file.bytes != null) {
           await FirebaseStorage.instance.ref(filePath).putData(file.bytes!);
@@ -372,18 +359,25 @@ class _MainActivityState extends State<MainActivity> {
           await FirebaseStorage.instance.ref(filePath).putFile(File(file.path!));
         }
 
-        final tasksRef = FirebaseFirestore.instance.collection('students').doc(FirebaseAuth.instance.currentUser!.uid);
-        final docSnapshot = await tasksRef.get();
+        if (isTask) {
+          // tasks koleksiyonundaki görev için güncelleme
+          final tasksRef = FirebaseFirestore.instance.collection('tasks').doc(taskId);
+          await tasksRef.update({'fileName': fileName});
+        } else {
+          // students koleksiyonundaki görev için güncelleme
+          final tasksRef = FirebaseFirestore.instance.collection('students').doc(FirebaseAuth.instance.currentUser!.uid);
+          final docSnapshot = await tasksRef.get();
 
-        if (docSnapshot.exists) {
-          final data = docSnapshot.data();
-          if (data != null && data.containsKey('tasks')) {
-            List<dynamic> tasks = List.from(data['tasks']);
-            int taskIndex = tasks.indexWhere((task) => task['taskId'] == taskId);
-            if (taskIndex != -1) {
-              tasks[taskIndex]['submittedFileName'] = fileName;
-              tasks[taskIndex]['isSubmitted'] = true;
-              await tasksRef.update({'tasks': tasks});
+          if (docSnapshot.exists) {
+            final data = docSnapshot.data();
+            if (data != null && data.containsKey('tasks')) {
+              List<dynamic> tasks = List.from(data['tasks']);
+              int taskIndex = tasks.indexWhere((task) => task['taskId'] == taskId);
+              if (taskIndex != -1) {
+                tasks[taskIndex]['submittedFileName'] = fileName;
+                tasks[taskIndex]['isSubmitted'] = true;
+                await tasksRef.update({'tasks': tasks});
+              }
             }
           }
         }
@@ -408,6 +402,7 @@ class Task {
   final String fileName;
   final String submittedFileName;
   final bool isSubmitted;
+  String source;
 
   Task({
     required this.userId,
@@ -418,6 +413,7 @@ class Task {
     required this.fileName,
     this.submittedFileName = "",
     this.isSubmitted = false,
+    this.source = 'tasks',
   });
 
   Map<String, dynamic> toMap() {
@@ -430,6 +426,7 @@ class Task {
       'fileName': fileName,
       'submittedFileName': submittedFileName,
       'isSubmitted': isSubmitted,
+      'source': source,
     };
   }
 
@@ -443,6 +440,7 @@ class Task {
       fileName: map['fileName'] ?? '',
       submittedFileName: map['submittedFileName'] ?? '',
       isSubmitted: map['isSubmitted'] ?? false,
+      source: map['source'] ?? 'tasks',
     );
   }
 }
