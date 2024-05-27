@@ -40,7 +40,7 @@ class _GradingPageState extends State<GradingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notlama Sayfası'),
+        title: const Text('Notlama Sayfası mı'),
         backgroundColor: Colors.cyan,
         actions: [
           PopupMenuButton<String>(
