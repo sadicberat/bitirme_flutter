@@ -1,20 +1,22 @@
-import 'package:bitirme_flutter/login_page.dart';
-import 'package:bitirme_flutter/main_page.dart';
-import 'package:bitirme_flutter/profil_page.dart';
-import 'package:bitirme_flutter/services/auth/app_user.dart';
-import 'package:bitirme_flutter/services/auth/auth_service.dart';
+import 'package:bitirme_flutter/signup_page.dart';
 import 'package:bitirme_flutter/videos/video.dart';
 import 'package:bitirme_flutter/videos/video_fizik.dart';
 import 'package:bitirme_flutter/videos/video_mat.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:lottie/lottie.dart';
+import 'package:bitirme_flutter/main_page.dart';
+import 'package:bitirme_flutter/login_page.dart';
+import 'package:bitirme_flutter/profil_page.dart';
+import 'package:bitirme_flutter/services/auth/app_user.dart';
+import 'package:bitirme_flutter/services/auth/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'notlama_st.dart';
 import 'notlama_te.dart';
-import 'signup_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +27,7 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   MyApp({Key? key}) : super(key: key);
 
+  // Create an instance of AuthService
   final authService = AuthService();
 
   @override
@@ -33,9 +36,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        textTheme: GoogleFonts.latoTextTheme(
-          Theme.of(context).textTheme,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyan),
+        useMaterial3: true,
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.cyan,
         ),
       ),
       initialRoute: '/',
@@ -43,7 +47,6 @@ class MyApp extends StatelessWidget {
         '/': (context) => const LoginPage(),
         '/main': (context) => const MainActivity(),
         '/login': (context) => const LoginPage(),
-        '/signup': (context) => const SignUpPage(),
         '/profile': (context) => FutureBuilder<AppUser?>(
           future: authService.getUser(FirebaseAuth.instance.currentUser!.uid),
           builder: (context, snapshot) {
@@ -65,6 +68,10 @@ class MyApp extends StatelessWidget {
         '/videoPage': (context) => const VideoPage(),
         '/video_fizik': (context) => VideoFizikPage(),
         '/video_mat': (context) => const VideoMatPage(),
+        '/signup': (context) => const SignUpPage(),
+
+        // Define your /main route here
+        // other routes...
       },
     );
   }

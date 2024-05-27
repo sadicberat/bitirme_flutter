@@ -1,9 +1,12 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:lottie/lottie.dart';
 import 'package:bitirme_flutter/services/auth/app_user.dart';
 import 'package:bitirme_flutter/services/auth/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:file_picker/file_picker.dart';
@@ -38,8 +41,21 @@ class _MainActivityState extends State<MainActivity> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Görev Takip', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Shimmer.fromColors(
+          baseColor: Colors.white,
+          highlightColor: Colors.cyanAccent,
+          child: Text(
+            'Görev Takip',
+            style: GoogleFonts.lobster(
+              textStyle: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
         actions: [
+          IconButton(
+            icon: Image.asset('lib/images/yunus.png'), // Görselinizi burada kullanın
+            onPressed: () {},
+          ),
           PopupMenuButton<String>(
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'logout', child: Text('Çıkış Yap')),
@@ -52,11 +68,12 @@ class _MainActivityState extends State<MainActivity> {
             },
           ),
         ],
+        backgroundColor: Colors.cyan,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
         child: Column(
           children: [
+           //Lottie.asset('assets/calendar_animation.json', height: 200),
             TableCalendar(
               calendarFormat: calendarFormat,
               focusedDay: focusedDay,
@@ -75,19 +92,29 @@ class _MainActivityState extends State<MainActivity> {
             const SizedBox(height: 16),
             TextField(
               controller: _taskNameController,
-              decoration: InputDecoration(hintText: 'Görev Adı'),
+              decoration: InputDecoration(
+                hintText: 'Görev Adı',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _taskDescriptionController,
-              decoration: InputDecoration(hintText: 'Görev Açıklaması'),
+              decoration: InputDecoration(
+                hintText: 'Görev Açıklaması',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: selectedTask == null ? addTask : updateTask,
               child: Text(selectedTask == null ? 'Görev Ekle' : 'Görevi Güncelle'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
+                backgroundColor: Colors.cyan,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -95,106 +122,109 @@ class _MainActivityState extends State<MainActivity> {
               ),
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  tasks.sort((a, b) => DateFormat('yyyy-MM-dd')
-                      .parse(a.date)
-                      .compareTo(DateFormat('yyyy-MM-dd').parse(b.date)));
-                  return Card(
-                    elevation: 5,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                tasks.sort((a, b) => DateFormat('yyyy-MM-dd')
+                    .parse(a.date)
+                    .compareTo(DateFormat('yyyy-MM-dd').parse(b.date)));
+                return Card(
+                  elevation: 5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(16.0),
+                    title: Text(
+                      tasks[index].taskName,
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.all(16.0),
-                      title: Text(tasks[index].taskName, style: TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${tasks[index].taskDescription}\nDate: ${tasks[index].date}'),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              if (tasks[index].fileName.isNotEmpty)
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    try {
-                                      String downloadURL = await getDownloadURL(
-                                          tasks[index].userId, tasks[index].taskId, tasks[index].fileName);
-                                      if (await canLaunch(downloadURL)) {
-                                        await launch(downloadURL);
-                                      } else {
-                                        throw 'Could not launch $downloadURL';
-                                      }
-                                    } catch (e) {
-                                      print("İndirme hatası: $e");
-                                    }
-                                  },
-                                  child: const Text('Dosya İndir'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.deepPurple,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              if (tasks[index].submittedFileName.isNotEmpty)
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    try {
-                                      String downloadURL = await getDownloadURL(
-                                          tasks[index].userId, tasks[index].taskId, tasks[index].submittedFileName, isSubmitted: true);
-                                      if (await canLaunch(downloadURL)) {
-                                        await launch(downloadURL);
-                                      } else {
-                                        throw 'Could not launch $downloadURL';
-                                      }
-                                    } catch (e) {
-                                      print("İndirme hatası: $e");
-                                    }
-                                  },
-                                  child: const Text('ödev'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.deepPurple,
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${tasks[index].taskDescription}\nDate: ${tasks[index].date}'),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (tasks[index].fileName.isNotEmpty)
                               ElevatedButton(
-                                onPressed: () => uploadFile(tasks[index].taskId, tasks[index].source == 'tasks'),
-                                child: const Text('Dosya Yükle'),
+                                onPressed: () async {
+                                  try {
+                                    String downloadURL = await getDownloadURL(
+                                        tasks[index].userId, tasks[index].taskId, tasks[index].fileName);
+                                    if (await canLaunch(downloadURL)) {
+                                      await launch(downloadURL);
+                                    } else {
+                                      throw 'Could not launch $downloadURL';
+                                    }
+                                  } catch (e) {
+                                    print("İndirme hatası: $e");
+                                  }
+                                },
+                                child: const Text('Dosya İndir'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.deepPurple,
+                                  backgroundColor: Colors.cyan,
                                   foregroundColor: Colors.white,
                                 ),
                               ),
-                              if (tasks[index].source == 'tasks' && tasks[index].userId == FirebaseAuth.instance.currentUser!.uid)
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () {
-                                        setState(() {
-                                          selectedTask = tasks[index];
-                                          _taskNameController.text = selectedTask!.taskName;
-                                          _taskDescriptionController.text = selectedTask!.taskDescription;
-                                        });
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete),
-                                      onPressed: () => deleteTask(tasks[index].taskId),
-                                    ),
-                                  ],
+                            if (tasks[index].submittedFileName.isNotEmpty)
+                              ElevatedButton(
+                                onPressed: () async {
+                                  try {
+                                    String downloadURL = await getDownloadURL(
+                                        tasks[index].userId, tasks[index].taskId, tasks[index].submittedFileName, isSubmitted: true);
+                                    if (await canLaunch(downloadURL)) {
+                                      await launch(downloadURL);
+                                    } else {
+                                      throw 'Could not launch $downloadURL';
+                                    }
+                                  } catch (e) {
+                                    print("İndirme hatası: $e");
+                                  }
+                                },
+                                child: const Text('ödev'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.cyan,
+                                  foregroundColor: Colors.white,
                                 ),
-                            ],
-                          ),
-                        ],
-                      ),
+                              ),
+                            ElevatedButton(
+                              onPressed: () => uploadFile(tasks[index].taskId, tasks[index].source == 'tasks'),
+                              child: const Text('Dosya Yükle'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.cyan,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                            if (tasks[index].source == 'tasks' && tasks[index].userId == FirebaseAuth.instance.currentUser!.uid)
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () {
+                                      setState(() {
+                                        selectedTask = tasks[index];
+                                        _taskNameController.text = selectedTask!.taskName;
+                                        _taskDescriptionController.text = selectedTask!.taskDescription;
+                                      });
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () => deleteTask(tasks[index].taskId),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ],
         ),

@@ -53,7 +53,7 @@ class _SignUpPageState extends State<SignUpPage> {
             SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedRole,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Rol Seçin',
                 border: OutlineInputBorder(),
               ),

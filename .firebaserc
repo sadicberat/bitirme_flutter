@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "bitirmeflutter-68bb0"
-  }
+    "default": "bitirme-flutter-68bb0",
+    "asd": "bitirme-flutter-68bb0"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
 }

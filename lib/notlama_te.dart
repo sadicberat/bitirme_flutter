@@ -9,10 +9,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 class GradingPage extends StatefulWidget {
   @override
-  _StudentPageState createState() => _StudentPageState();
+  _GradingPageState createState() => _GradingPageState();
 }
 
-class _StudentPageState extends State<GradingPage> {
+class _GradingPageState extends State<GradingPage> {
   String? selectedStudent;
   String? selectedCourse;
   String? selectedGrade;
@@ -41,6 +41,7 @@ class _StudentPageState extends State<GradingPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notlama Sayfası'),
+        backgroundColor: Colors.cyan,
         actions: [
           PopupMenuButton<String>(
             itemBuilder: (context) => [
@@ -68,8 +69,8 @@ class _StudentPageState extends State<GradingPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            DropdownButton<String>(
-              hint: Text('Select Student'),
+            _buildDropdownButton(
+              hint: 'Öğrenci seçiniz',
               value: selectedStudent,
               items: students.entries.map((entry) {
                 return DropdownMenuItem<String>(
@@ -90,256 +91,310 @@ class _StudentPageState extends State<GradingPage> {
                 });
               },
             ),
-            SizedBox(height: 12),
-            if (selectedStudent != null)
-              Flexible(
-                fit: FlexFit.loose,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButton<String>(
-                      hint: Text('Select Course'),
-                      value: selectedCourse,
-                      items: courses.map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedCourse = newValue;
-                        });
-                      },
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            decoration: InputDecoration(hintText: 'Not giriniz'),
-                            onChanged: (String value) {
-                              selectedGrade = value;
-                            },
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            if (selectedStudent != null && selectedCourse != null && selectedGrade != null) {
-                              addGradeToStudent(selectedStudent!, selectedCourse!, selectedGrade!);
-                            }
-                          },
-                          child: const Text('Not Ekle'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.deepPurple,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          final DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2000, 1),
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null && picked != selectedDate)
-                            setState(() {
-                              selectedDate = picked;
-                            });
-                        } catch (e) {
-                          print('DatePicker error: $e');
-                        }
-                      },
-                      child: Text('Select date'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    TextField(
-                      controller: dueDateController,
-                      readOnly: true,
-                      decoration: InputDecoration(hintText: 'Son Teslim Tarihi Seçin'),
-                      onTap: () async {
-                        try {
-                          final DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              dueDate = picked;
-                              dueDateController.text = DateFormat('yyyy-MM-dd').format(picked);
-                            });
-                          }
-                        } catch (e) {
-                          print('DatePicker error: $e');
-                        }
-                      },
-                    ),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: taskNameController,
-                      decoration: InputDecoration(hintText: 'Görev Adı'),
-                    ),
-                    SizedBox(height: 12),
-                    TextField(
-                      controller: taskDescriptionController,
-                      decoration: InputDecoration(hintText: 'Görev Açıklaması'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (selectedStudent != null && selectedDate != null && dueDate != null) {
-                          addTask(
-                              selectedStudent!,
-                              selectedDate!,
-                              taskNameController.text,
-                              taskDescriptionController.text,
-                              dueDate!);
-                        }
-                      },
-                      child: Text('Görev Ekle'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                    if (selectedDate != null)
-                      Text('Selected date: ${selectedDate.toString()}'),
-                    SizedBox(height: 16),
-                    isLoadingTasks
-                        ? CircularProgressIndicator()
-                        : Flexible(
-                      fit: FlexFit.loose,
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: tasks.length,
-                        itemBuilder: (context, index) {
-                          tasks.sort((a, b) => DateFormat('yyyy-MM-dd')
-                              .parse(a.date)
-                              .compareTo(DateFormat('yyyy-MM-dd').parse(b.date)));
-                          return Card(
-                            elevation: 5,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: ListTile(
-                              contentPadding: EdgeInsets.all(16.0),
-                              title: Text(tasks[index].taskName, style: TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${tasks[index].taskDescription}\nDate: ${tasks[index].date}'),
-                                  const SizedBox(height: 8),
-                                  if (DateTime.now().isAfter(DateFormat('yyyy-MM-dd').parse(tasks[index].dueDate)))
-                                    Text('Son teslim tarihi geçti.', style: TextStyle(color: Colors.red)),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      ElevatedButton(
-                                        onPressed: () async {
-                                          try {
-                                            String downloadURL = await getDownloadURL(
-                                                tasks[index].userId, tasks[index].taskId, tasks[index].fileName);
-                                            if (await canLaunch(downloadURL)) {
-                                              await launch(downloadURL);
-                                            } else {
-                                              throw 'Could not launch $downloadURL';
-                                            }
-                                          } catch (e) {
-                                            print("İndirme hatası: $e");
-                                          }
-                                        },
-                                        child: const Text('Dosya İndir (Öğretmen)'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.deepPurple,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                      ),
-                                      if (tasks[index].submittedFileName.isNotEmpty)
-                                        ElevatedButton(
-                                          onPressed: () async {
-                                            try {
-                                              String downloadURL = await getDownloadURL(
-                                                  tasks[index].userId, tasks[index].taskId, tasks[index].submittedFileName, isSubmitted: true);
-                                              if (await canLaunch(downloadURL)) {
-                                                await launch(downloadURL);
-                                              } else {
-                                                throw 'Could not launch $downloadURL';
-                                              }
-                                            } catch (e) {
-                                              print("İndirme hatası: $e");
-                                            }
-                                          },
-                                          child: const Text('Dosya İndir (Öğrenci)'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.deepPurple,
-                                            foregroundColor: Colors.white,
-                                          ),
-                                        ),
-                                      ElevatedButton(
-                                        onPressed: DateTime.now().isAfter(DateFormat('yyyy-MM-dd').parse(tasks[index].dueDate))
-                                            ? null
-                                            : () => uploadFile(tasks[index].taskId),
-                                        child: Text(tasks[index].isSubmitted ? 'Teslim Edildi' : 'Dosya Yükle'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.deepPurple,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                      ),
-                                      if (tasks[index].userId ==
-                                          FirebaseAuth.instance.currentUser!.uid)
-                                        Row(
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(Icons.edit),
-                                              onPressed: () {
-                                                setState(() {
-                                                  selectedTask = tasks[index];
-                                                  taskNameController.text =
-                                                      selectedTask!.taskName;
-                                                  taskDescriptionController.text =
-                                                      selectedTask!.taskDescription;
-                                                });
-                                              },
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.delete),
-                                              onPressed: () => deleteTask(tasks[index].taskId),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      )
-
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 12),
+            if (selectedStudent != null) ...[
+              _buildDropdownButton(
+                hint: 'Select Course',
+                value: selectedCourse,
+                items: courses.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedCourse = newValue;
+                  });
+                },
               ),
+              _buildGradeInput(),
+              const SizedBox(height: 12),
+              _buildDateButton('Tarih Seçiniz', () async {
+                try {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2000, 1),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null && picked != selectedDate)
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                } catch (e) {
+                  print('DatePicker error: $e');
+                }
+              }),
+              const SizedBox(height: 16),
+              _buildDueDateInput(),
+              _buildTextField(taskNameController, 'Görev Adı'),
+              _buildTextField(taskDescriptionController, 'Görev Açıklaması'),
+              const SizedBox(height: 16),
+              _buildAddTaskButton(),
+              if (selectedDate != null)
+                Text('Selected date: ${selectedDate.toString()}'),
+              const SizedBox(height: 16),
+              isLoadingTasks ? CircularProgressIndicator() : _buildTaskList(),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownButton({
+    required String hint,
+    required String? value,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButton<String>(
+      hint: Text(hint),
+      value: value,
+      items: items,
+      onChanged: onChanged,
+      isExpanded: true,
+      style: TextStyle(color: Colors.black, fontSize: 16),
+      dropdownColor: Colors.white,
+      iconEnabledColor: Colors.cyan,
+    );
+  }
+
+  Widget _buildGradeInput() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Not giriniz',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.cyan),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: Colors.cyan),
+              ),
+            ),
+            onChanged: (String value) {
+              selectedGrade = value;
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        ElevatedButton(
+          onPressed: () {
+            if (selectedStudent != null && selectedCourse != null && selectedGrade != null) {
+              addGradeToStudent(selectedStudent!, selectedCourse!, selectedGrade!);
+            }
+          },
+          child: const Text('Not Ekle'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.cyan,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateButton(String text, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      child: Text(text),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.cyan,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDueDateInput() {
+    return TextField(
+      controller: dueDateController,
+      readOnly: true,
+      decoration: InputDecoration(
+        hintText: 'Son Teslim Tarihi Seçin',
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.cyan),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.cyan),
+        ),
+      ),
+      onTap: () async {
+        try {
+          final DateTime? picked = await showDatePicker(
+            context: context,
+            initialDate: DateTime.now(),
+            firstDate: DateTime.now(),
+            lastDate: DateTime(2030),
+          );
+          if (picked != null) {
+            setState(() {
+              dueDate = picked;
+              dueDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+            });
+          }
+        } catch (e) {
+          print('DatePicker error: $e');
+        }
+      },
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String hintText) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          hintText: hintText,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.cyan),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.cyan),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddTaskButton() {
+    return ElevatedButton(
+      onPressed: () {
+        if (selectedStudent != null && selectedDate != null && dueDate != null) {
+          addTask(
+            selectedStudent!,
+            selectedDate!,
+            taskNameController.text,
+            taskDescriptionController.text,
+            dueDate!,
+          );
+        }
+      },
+      child: Text('Görev Ekle'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.cyan,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskList() {
+    return Flexible(
+      fit: FlexFit.loose,
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          tasks.sort((a, b) => DateFormat('yyyy-MM-dd').parse(a.date).compareTo(DateFormat('yyyy-MM-dd').parse(b.date)));
+          return Card(
+            elevation: 5,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: ListTile(
+              contentPadding: EdgeInsets.all(16.0),
+              title: Text(tasks[index].taskName, style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${tasks[index].taskDescription}\nDate: ${tasks[index].date}'),
+                  const SizedBox(height: 8),
+                  if (DateTime.now().isAfter(DateFormat('yyyy-MM-dd').parse(tasks[index].dueDate)))
+                    Text('Son teslim tarihi geçti.', style: TextStyle(color: Colors.red)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            String downloadURL = await getDownloadURL(tasks[index].userId, tasks[index].taskId, tasks[index].fileName);
+                            if (await canLaunch(downloadURL)) {
+                              await launch(downloadURL);
+                            } else {
+                              throw 'Could not launch $downloadURL';
+                            }
+                          } catch (e) {
+                            print("İndirme hatası: $e");
+                          }
+                        },
+                        child: const Text('Dosya İndir (Öğretmen)'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      if (tasks[index].submittedFileName.isNotEmpty)
+                        ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              String downloadURL = await getDownloadURL(tasks[index].userId, tasks[index].taskId, tasks[index].submittedFileName, isSubmitted: true);
+                              if (await canLaunch(downloadURL)) {
+                                await launch(downloadURL);
+                              } else {
+                                throw 'Could not launch $downloadURL';
+                              }
+                            } catch (e) {
+                              print("İndirme hatası: $e");
+                            }
+                          },
+                          child: const Text('Dosya İndir (Öğrenci)'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.cyan,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ElevatedButton(
+                        onPressed: DateTime.now().isAfter(DateFormat('yyyy-MM-dd').parse(tasks[index].dueDate)) ? null : () => uploadFile(tasks[index].taskId),
+                        child: Text(tasks[index].isSubmitted ? 'Teslim Edildi' : 'Dosya Yükle'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                      if (tasks[index].userId == FirebaseAuth.instance.currentUser!.uid)
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () {
+                                setState(() {
+                                  selectedTask = tasks[index];
+                                  taskNameController.text = selectedTask!.taskName;
+                                  taskDescriptionController.text = selectedTask!.taskDescription;
+                                });
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () => deleteTask(tasks[index].taskId),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -485,7 +540,6 @@ class _StudentPageState extends State<GradingPage> {
     }
   }
 
-
   Future<void> uploadFile(String taskId) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -531,9 +585,6 @@ class _StudentPageState extends State<GradingPage> {
       print("Dosya seçilmedi.");
     }
   }
-
-
-
 
   void handleMenuSelection(String value) {
     switch (value) {
