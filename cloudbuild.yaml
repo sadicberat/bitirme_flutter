@@ -1,10 +1,10 @@
 steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['auth', 'activate-service-account', '--key-file=$GOOGLE_APPLICATION_CREDENTIALS']
   - name: 'gcr.io/cloud-builders/flutter'
     args: ['build', 'web']
-
   - name: 'gcr.io/cloud-builders/gsutil'
     args: ['-m', 'cp', '-r', 'build/web/*', 'gs://YOUR_BUCKET_NAME']
-
   - name: 'gcr.io/cloud-builders/gcloud'
     args: ['firebase', 'deploy', '--only', 'hosting']
     env:
