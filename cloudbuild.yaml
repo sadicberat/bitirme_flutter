@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/cloud-builders/flutter'
+    args: ['build', 'web']
+
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['-m', 'cp', '-r', 'build/web/*', 'gs://YOUR_BUCKET_NAME']
+
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['firebase', 'deploy', '--only', 'hosting']
+    env:
+      - 'FIREBASE_TOKEN=${_FIREBASE_TOKEN}'
+
+timeout: '1200s'
