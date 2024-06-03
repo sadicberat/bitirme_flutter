@@ -159,6 +159,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 profileImageUrl == null ? Icon(Icons.person, size: 50) : null,
           ),
           if (profileImageUrl != null)
+            /*
             Image.network(
               profileImageUrl!,
               loadingBuilder: (BuildContext context, Widget child,
@@ -181,6 +182,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 return Center(child: Icon(Icons.error, color: Colors.red));
               },
             ),
+
+             */
           TextButton(
             onPressed: uploadProfileImage,
             child: Text('Profil Fotoğrafını Güncelle'),
